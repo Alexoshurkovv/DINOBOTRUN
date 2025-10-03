@@ -117,12 +117,110 @@
             margin-bottom: 20px;
         }
 
-        .shop-title {
+        /* СТИЛИ РЕФЕРАЛЬНОЙ СИСТЕМЫ */
+        .referral-container {
+            display: none;
+            background: var(--tg-theme-secondary-bg-color, #f4f4f5);
+            border-radius: 16px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .referral-title {
             text-align: center;
             font-size: 20px;
             font-weight: 700;
             margin-bottom: 15px;
             color: var(--tg-theme-text-color, #000000);
+        }
+
+        .referral-link-container {
+            background: var(--tg-theme-bg-color, #ffffff);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 20px;
+            border: 2px solid var(--tg-theme-button-color, #2481cc);
+        }
+
+        .referral-link {
+            font-size: 14px;
+            word-break: break-all;
+            margin-bottom: 10px;
+            color: var(--tg-theme-text-color, #000000);
+        }
+
+        .copy-btn {
+            background: var(--tg-theme-button-color, #2481cc);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%;
+            font-size: 14px;
+        }
+
+        .referral-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .stat-item {
+            background: var(--tg-theme-bg-color, #ffffff);
+            border-radius: 12px;
+            padding: 15px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--tg-theme-button-color, #2481cc);
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--tg-theme-hint-color, #999999);
+        }
+
+        .referrals-list {
+            background: var(--tg-theme-bg-color, #ffffff);
+            border-radius: 12px;
+            padding: 15px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .referral-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--tg-theme-secondary-bg-color, #f4f4f5);
+        }
+
+        .referral-item:last-child {
+            border-bottom: none;
+        }
+
+        .referral-name {
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .referral-date {
+            font-size: 12px;
+            color: var(--tg-theme-hint-color, #999999);
+        }
+
+        .no-referrals {
+            text-align: center;
+            color: var(--tg-theme-hint-color, #999999);
+            font-style: italic;
+            padding: 20px;
         }
 
         .skins-grid {
@@ -247,6 +345,7 @@
             .counter-value { font-size: 16px; }
             #gameCanvas { height: 180px; }
             .skins-grid { grid-template-columns: 1fr; }
+            .referral-stats { grid-template-columns: 1fr; }
         }
     </style>
 </head>
@@ -285,6 +384,31 @@
         </div>
     </div>
 
+    <!-- РЕФЕРАЛЬНАЯ СИСТЕМА -->
+    <div class="referral-container" id="referralContainer">
+        <div class="referral-title">👥 Реферальная система</div>
+        
+        <div class="referral-link-container">
+            <div class="referral-link" id="referralLink">Загрузка...</div>
+            <button class="copy-btn" onclick="copyReferralLink()">📋 Копировать ссылку</button>
+        </div>
+
+        <div class="referral-stats">
+            <div class="stat-item">
+                <div class="stat-value" id="referralCount">0</div>
+                <div class="stat-label">Рефералов</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="referralBonus">0</div>
+                <div class="stat-label">Бонусные монеты</div>
+            </div>
+        </div>
+
+        <div class="referrals-list" id="referralsList">
+            <!-- Список рефералов будет добавлен через JavaScript -->
+        </div>
+    </div>
+
     <div class="game-area">
         <canvas id="gameCanvas" width="600" height="400"></canvas>
         <div class="mobile-controls" id="mobileControls">
@@ -299,6 +423,9 @@
         </button>
         <button class="nav-button" onclick="showShop()">
             <i>🛍️</i><span>МАГАЗИН</span>
+        </button>
+        <button class="nav-button" onclick="showReferrals()">
+            <i>👥</i><span>РЕФЕРАЛЫ</span>
         </button>
         <button class="nav-button" onclick="showLeaders()">
             <i>🏆</i><span>ЛИДЕРЫ</span>
@@ -392,6 +519,78 @@
             } catch {
                 return value ? parseInt(value) : defaultValue;
             }
+        }
+
+        // ===== РЕФЕРАЛЬНАЯ СИСТЕМА =====
+        function generateReferralLink() {
+            const user = tg.initDataUnsafe?.user;
+            if (user) {
+                const referralCode = btoa(user.id.toString()).replace(/=/g, '');
+                return `https://t.me/dinorunnebot?start=${referralCode}`;
+            } else {
+                return "https://t.me/dinorunnebot?start=guest";
+            }
+        }
+
+        function loadReferrals() {
+            return loadFromStorage('referrals', []);
+        }
+
+        function saveReferrals(referrals) {
+            saveToStorage('referrals', referrals);
+        }
+
+        function getReferralStats() {
+            const referrals = loadReferrals();
+            const referralCount = referrals.length;
+            const referralBonus = referralCount * 50; // 50 монет за каждого реферала
+            
+            return {
+                count: referralCount,
+                bonus: referralBonus
+            };
+        }
+
+        function renderReferrals() {
+            const referrals = loadReferrals();
+            const stats = getReferralStats();
+            const referralsList = document.getElementById('referralsList');
+            const referralLink = document.getElementById('referralLink');
+            const referralCount = document.getElementById('referralCount');
+            const referralBonus = document.getElementById('referralBonus');
+
+            // Обновляем статистику
+            referralCount.textContent = stats.count;
+            referralBonus.textContent = stats.bonus;
+
+            // Обновляем ссылку
+            referralLink.textContent = generateReferralLink();
+
+            // Обновляем список рефералов
+            if (referrals.length === 0) {
+                referralsList.innerHTML = '<div class="no-referrals">У вас пока нет рефералов</div>';
+            } else {
+                referralsList.innerHTML = referrals.map(ref => `
+                    <div class="referral-item">
+                        <div class="referral-name">${ref.name || 'Пользователь'}</div>
+                        <div class="referral-date">${new Date(ref.date).toLocaleDateString()}</div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        function copyReferralLink() {
+            const referralLink = generateReferralLink();
+            navigator.clipboard.writeText(referralLink).then(() => {
+                document.getElementById('navHeader').textContent = 'Ссылка скопирована!';
+                setTimeout(() => {
+                    if (document.getElementById('referralContainer').style.display === 'block') {
+                        document.getElementById('navHeader').textContent = 'Реферальная система';
+                    } else {
+                        document.getElementById('navHeader').textContent = 'Главное меню';
+                    }
+                }, 2000);
+            });
         }
 
         // ===== ИГРОВОЙ СТАТУС =====
@@ -577,19 +776,30 @@
         function showMainMenu() {
             document.getElementById('navHeader').textContent = 'Главное меню';
             document.getElementById('shopContainer').style.display = 'none';
+            document.getElementById('referralContainer').style.display = 'none';
             document.getElementById('gameCanvas').style.display = 'block';
         }
 
         function showShop() {
             document.getElementById('navHeader').textContent = 'Магазин скинов';
             document.getElementById('shopContainer').style.display = 'block';
+            document.getElementById('referralContainer').style.display = 'none';
             document.getElementById('gameCanvas').style.display = 'none';
             renderShop();
+        }
+
+        function showReferrals() {
+            document.getElementById('navHeader').textContent = 'Реферальная система';
+            document.getElementById('shopContainer').style.display = 'none';
+            document.getElementById('referralContainer').style.display = 'block';
+            document.getElementById('gameCanvas').style.display = 'none';
+            renderReferrals();
         }
 
         function showLeaders() {
             document.getElementById('navHeader').textContent = 'Таблица лидеров';
             document.getElementById('shopContainer').style.display = 'none';
+            document.getElementById('referralContainer').style.display = 'none';
             document.getElementById('gameCanvas').style.display = 'block';
             alert('Таблица лидеров будет скоро добавлена!');
         }
@@ -598,6 +808,7 @@
             if (!gameRunning) {
                 document.getElementById('navHeader').textContent = 'Dino Runner - Игра началась!';
                 document.getElementById('shopContainer').style.display = 'none';
+                document.getElementById('referralContainer').style.display = 'none';
                 document.getElementById('gameCanvas').style.display = 'block';
                 startGame();
                 gameRunning = true;
@@ -918,6 +1129,3 @@
     </script>
 </body>
 </html>
-
-
-
