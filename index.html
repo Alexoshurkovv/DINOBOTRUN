@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dino Runner - Telegram Mini App</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        }
+
+        body {
+            background: var(--tg-theme-bg-color, #ffffff);
+            color: var(--tg-theme-text-color, #000000);
+            padding: 10px;
+            padding-bottom: 70px;
+            max-width: 100%;
+            overflow-x: hidden;
+            touch-action: manipulation;
+        }
+
+        .nav-header {
+            background: var(--tg-theme-secondary-bg-color, #f4f4f5);
+            padding: 12px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .game-title {
+            text-align: center;
+            font-size: 24px;
+            font-weight: 700;
+            margin: 15px 0;
+            color: var(--tg-theme-text-color, #000000);
+        }
+
+        .counters {
+            display: flex;
+            justify-content: space-around;
+            background: var(--tg-theme-secondary-bg-color, #f4f4f5);
+            padding: 15px;
+            border-radius: 16px;
+            margin-bottom: 20px;
+        }
+
+        .counter-item {
+            text-align: center;
+        }
+
+        .counter-value {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--tg-theme-button-color, #2481cc);
+        }
+
+        .counter-label {
+            font-size: 12px;
+            color: var(--tg-theme-hint-color, #999999);
+            margin-top: 4px;
+        }
+
+        .total-score {
+            text-align: center;
+            margin: 10px 0;
+            font-weight: bold;
+            font-size: 16px;
+            color: var(--tg-theme-text-color, #000000);
+        }
+
+        .exchange-btn {
+            background: var(--tg-theme-button-color, #2481cc);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            margin: 5px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .exchange-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .game-area {
+            background: var(--tg-theme-secondary-bg-color, #f4f4f5);
+            border-radius: 16px;
+            padding: 10px;
+            margin-bottom: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #gameCanvas {
+            width: 100%;
+            height: 200px;
+            background: white;
+            border-radius: 8px;
+            display: block;
+            margin: 0 auto;
+        }
+
+        /* СТИЛИ МАГАЗИНА */
+        .shop-container {
+            display: none;
+            background: var(--tg-theme-secondary-bg-color, #f4f4f5);
+            border-radius: 16px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .shop-title {
+            text-align: center;
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 15px;
+            color: var(--tg-theme-text-color, #000000);
+        }
+
+        .skins-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        .skin-item {
+            background: var(--tg-theme-bg-color, #ffffff);
+            border-radius: 12px;
+            padding: 10px;
+            text-align: center;
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .skin-item.active {
+            border-color: var(--tg-theme-button-color, #2481cc);
+        }
+
+        .skin-item.owned {
+            border-color: #4CAF50;
+        }
+
+        .skin-preview {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 8px;
+            background: #f0f0f0;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            color: #666;
+        }
+
+        .skin-name {
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+
+        .skin-price {
+            font-size: 12px;
+            color: var(--tg-theme-hint-color, #999999);
+            margin-bottom: 8px;
+        }
+
+        .skin-btn {
+            background: var(--tg-theme-button-color, #2481cc);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 11px;
+            width: 100%;
+        }
+
+        .skin-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .skin-btn.equip {
+            background: #4CAF50;
+        }
+
+        .mobile-controls {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 15px;
+            display: none;
+        }
+
+        .control-btn {
+            padding: 12px 25px;
+            font-size: 14px;
+            background: var(--tg-theme-button-color, #2481cc);
+            color: var(--tg-theme-button-text-color, #ffffff);
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            min-width: 100px;
+        }
+
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--tg-theme-bg-color, #ffffff);
+            border-top: 1px solid var(--tg-theme-secondary-bg-color, #f4f4f5);
+            display: flex;
+            padding: 10px;
+            height: 60px;
+        }
+
+        .nav-button {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: none;
+            border: none;
+            color: var(--tg-theme-text-color, #000000);
+            font-size: 10px;
+            gap: 4px;
+            cursor: pointer;
+        }
+
+        .nav-button i {
+            font-size: 18px;
+        }
+
+        @media (max-width: 480px) {
+            .game-title { font-size: 20px; }
+            .counter-value { font-size: 16px; }
+            #gameCanvas { height: 180px; }
+            .skins-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="nav-header" id="navHeader">Главное меню</div>
+    <h1 class="game-title">Dino Runner</h1>
+
+    <!-- ОБЩИЙ СЧЕТ И КНОПКА ОБМЕНА -->
+    <div class="total-score" id="totalScore">Общий счет: 0</div>
+    <div style="text-align: center; margin: 10px 0;">
+        <button class="exchange-btn" onclick="exchangeCoinsForStar()" id="exchangeBtn">
+            Обменять 100 монет на 1 звезду
+        </button>
+    </div>
+
+    <div class="counters">
+        <div class="counter-item">
+            <div class="counter-value" id="pointsCounter">0</div>
+            <div class="counter-label">ОЧКИ ЗАБЕГА</div>
+        </div>
+        <div class="counter-item">
+            <div class="counter-value" id="coinsCounter">0</div>
+            <div class="counter-label">МОНЕТЫ</div>
+        </div>
+        <div class="counter-item">
+            <div class="counter-value" id="starsCounter">0</div>
+            <div class="counter-label">ЗВЕЗДЫ</div>
+        </div>
+    </div>
+
+    <!-- МАГАЗИН СКИНОВ -->
+    <div class="shop-container" id="shopContainer">
+        <div class="shop-title">🎨 Магазин скинов</div>
+        <div class="skins-grid" id="skinsGrid">
+            <!-- Скины будут добавлены через JavaScript -->
+        </div>
+    </div>
+
+    <div class="game-area">
+        <canvas id="gameCanvas" width="600" height="400"></canvas>
+        <div class="mobile-controls" id="mobileControls">
+            <button class="control-btn" onclick="jumpDino()">ПРЫГАТЬ</button>
+            <button class="control-btn" onclick="startDinoGame()">СТАРТ</button>
+        </div>
+    </div>
+
+    <div class="bottom-nav">
+        <button class="nav-button" onclick="showMainMenu()">
+            <i>🏠</i><span>МЕНЮ</span>
+        </button>
+        <button class="nav-button" onclick="showShop()">
+            <i>🛍️</i><span>МАГАЗИН</span>
+        </button>
+        <button class="nav-button" onclick="showLeaders()">
+            <i>🏆</i><span>ЛИДЕРЫ</span>
+        </button>
+        <button class="nav-button" onclick="startDinoGame()">
+            <i>🎮</i><span>START</span>
+        </button>
+    </div>
+
+    <script>
+        // ===== TELEGRAM INTEGRATION =====
+        let tg = window.Telegram.WebApp;
+        tg.expand();
+        tg.enableClosingConfirmation();
+
+        // ===== СПИСОК СКИНОВ =====
+        const skins = [
+            {
+                id: 'default',
+                name: 'Классический',
+                price: 0,
+                spriteUrl: "C:/Users/User/Downloads/dino-runner-app/image.png",
+                owned: true,
+                equipped: true
+            },
+            {
+                id: 'blue',
+                name: 'Синий динозавр',
+                price: 50,
+                spriteUrl: "C:/Users/User/Downloads/dino-runner-app/image.png",
+                owned: false,
+                equipped: false
+            },
+            {
+                id: 'red',
+                name: 'Красный динозавр', 
+                price: 100,
+                spriteUrl: "C:/Users/User/Downloads/dino-runner-app/offline-sprite-1x-rato.png",
+                owned: false,
+                equipped: false
+            },
+            {
+                id: 'green',
+                name: 'Зеленый динозавр',
+                price: 150,
+                spriteUrl:"C:/Users/User/Downloads/dino-runner-app/offline-sprite-1x-rato.png",
+                owned: false,
+                equipped: false
+            },
+            {
+                id: 'gold',
+                name: 'Золотой динозавр',
+                price: 500,
+                spriteUrl: "C:/Users/User/Downloads/dino-runner-app/offline-sprite-1x-rato.png",
+                owned: false,
+                equipped: false
+            },
+            {
+                id: 'rainbow',
+                name: 'Радужный динозавр',
+                price: 1000,
+                spriteUrl: "C:/Users/User/Downloads/dino-runner-app/offline-sprite-1x-rato.png",
+                owned: false,
+                equipped: false
+            }
+        ];
+
+        // ===== ЛОКАЛЬНОЕ ХРАНИЛИЩЕ =====
+        function getStorageKey(key) {
+            const user = tg.initDataUnsafe?.user;
+            return user ? `dino_${user.id}_${key}` : `dino_guest_${key}`;
+        }
+
+        function saveToStorage(key, value) {
+            const storageKey = getStorageKey(key);
+            if (typeof value === 'object') {
+                localStorage.setItem(storageKey, JSON.stringify(value));
+            } else {
+                localStorage.setItem(storageKey, value.toString());
+            }
+        }
+
+        function loadFromStorage(key, defaultValue = 0) {
+            const storageKey = getStorageKey(key);
+            const value = localStorage.getItem(storageKey);
+            
+            if (value === null) return defaultValue;
+            
+            try {
+                return JSON.parse(value);
+            } catch {
+                return value ? parseInt(value) : defaultValue;
+            }
+        }
+
+        // ===== ИГРОВОЙ СТАТУС =====
+        let gameRunning = false;
+        let currentScore = 0;
+        let coins = loadFromStorage('coins', 0);
+        let stars = loadFromStorage('stars', 0);
+        let totalScore = loadFromStorage('totalScore', 0);
+        let userSkins = loadFromStorage('skins', skins);
+        let currentSkin = loadFromStorage('currentSkin', 'default');
+
+        // ===== ФУНКЦИИ ОБНОВЛЕНИЯ =====
+        function updatePoints(value) {
+            currentScore = value;
+            document.getElementById('pointsCounter').textContent = value;
+        }
+
+        function updateCoins(value) {
+            coins = value;
+            saveToStorage('coins', coins);
+            document.getElementById('coinsCounter').textContent = coins;
+            updateExchangeButton();
+            renderShop(); // Обновляем магазин при изменении монет
+        }
+
+        function updateStars(value) {
+            stars = value;
+            saveToStorage('stars', stars);
+            document.getElementById('starsCounter').textContent = stars;
+            updateExchangeButton();
+        }
+
+        function updateTotalScore(value) {
+            totalScore = value;
+            saveToStorage('totalScore', totalScore);
+            document.getElementById('totalScore').textContent = `Общий счет: ${totalScore}`;
+        }
+
+        function updateExchangeButton() {
+            const exchangeBtn = document.getElementById('exchangeBtn');
+            if (coins >= 100) {
+                exchangeBtn.disabled = false;
+                exchangeBtn.textContent = `Обменять 100 монет на 1 звезду`;
+            } else {
+                exchangeBtn.disabled = true;
+                exchangeBtn.textContent = `Нужно 100 монет для обмена`;
+            }
+        }
+
+        // ===== МАГАЗИН СКИНОВ =====
+        function renderShop() {
+            const skinsGrid = document.getElementById('skinsGrid');
+            skinsGrid.innerHTML = '';
+
+            userSkins.forEach(skin => {
+                const skinItem = document.createElement('div');
+                skinItem.className = 'skin-item';
+                
+                if (skin.equipped) skinItem.classList.add('active');
+                if (skin.owned) skinItem.classList.add('owned');
+
+                let buttonText = '';
+                let buttonAction = '';
+                let disabled = false;
+
+                if (skin.owned) {
+                    if (skin.equipped) {
+                        buttonText = '✅ Надет';
+                        disabled = true;
+                    } else {
+                        buttonText = 'Надеть';
+                        buttonAction = `equipSkin('${skin.id}')`;
+                    }
+                } else {
+                    if (coins >= skin.price) {
+                        buttonText = `Купить за ${skin.price} монет`;
+                        buttonAction = `buySkin('${skin.id}')`;
+                    } else {
+                        buttonText = `Нужно ${skin.price} монет`;
+                        disabled = true;
+                    }
+                }
+
+                skinItem.innerHTML = `
+                    <div class="skin-preview">
+                        <img src="${skin.spriteUrl}" alt="${skin.name}" style="max-width: 100%; max-height: 100%;" onerror="this.style.display='none'; this.parentNode.innerHTML='🎨 ${skin.name}'">
+                    </div>
+                    <div class="skin-name">${skin.name}</div>
+                    <div class="skin-price">${skin.owned ? '✅ Куплен' : `${skin.price} монет`}</div>
+                    <button class="skin-btn ${skin.owned && !skin.equipped ? 'equip' : ''}" 
+                            onclick="${buttonAction}" 
+                            ${disabled ? 'disabled' : ''}>
+                        ${buttonText}
+                    </button>
+                `;
+
+                skinsGrid.appendChild(skinItem);
+            });
+        }
+
+        function buySkin(skinId) {
+            const skin = userSkins.find(s => s.id === skinId);
+            if (!skin || skin.owned) return;
+
+            if (coins >= skin.price) {
+                coins -= skin.price;
+                skin.owned = true;
+                
+                updateCoins(coins);
+                saveToStorage('skins', userSkins);
+                renderShop();
+                
+                document.getElementById('navHeader').textContent = `Куплен скин: ${skin.name}!`;
+                setTimeout(() => {
+                    if (document.getElementById('shopContainer').style.display === 'block') {
+                        document.getElementById('navHeader').textContent = 'Магазин скинов';
+                    } else {
+                        document.getElementById('navHeader').textContent = 'Главное меню';
+                    }
+                }, 2000);
+            }
+        }
+
+        function equipSkin(skinId) {
+            // Снимаем все скины
+            userSkins.forEach(skin => {
+                skin.equipped = skin.id === skinId;
+            });
+
+            // Устанавливаем текущий скин
+            currentSkin = skinId;
+            const skin = userSkins.find(s => s.id === skinId);
+            
+            if (skin) {
+                // Меняем спрайт в игре
+                sprImg.src = skin.spriteUrl;
+                saveToStorage('currentSkin', currentSkin);
+                saveToStorage('skins', userSkins);
+                renderShop();
+                
+                document.getElementById('navHeader').textContent = `Надет скин: ${skin.name}!`;
+                setTimeout(() => {
+                    if (document.getElementById('shopContainer').style.display === 'block') {
+                        document.getElementById('navHeader').textContent = 'Магазин скинов';
+                    } else {
+                        document.getElementById('navHeader').textContent = 'Главное меню';
+                    }
+                }, 2000);
+            }
+        }
+
+        // ===== ОБМЕН МОНЕТ НА ЗВЕЗДЫ =====
+        function exchangeCoinsForStar() {
+            if (coins >= 100) {
+                coins -= 100;
+                stars += 1;
+                
+                updateCoins(coins);
+                updateStars(stars);
+                
+                document.getElementById('navHeader').textContent = 'Обменено! +1 звезда';
+                setTimeout(() => {
+                    document.getElementById('navHeader').textContent = 'Главное меню';
+                }, 2000);
+            }
+        }
+
+        // ===== СОХРАНЕНИЕ РЕЗУЛЬТАТА ИГРЫ =====
+        function saveGameScore(score, earnedCoins = 0) {
+            // Каждое очко = 1 монета
+            const coinsFromScore = score;
+            
+            totalScore += score;
+            coins += coinsFromScore + earnedCoins;
+            
+            updateTotalScore(totalScore);
+            updateCoins(coins);
+            
+            console.log('✅ Счет сохранен локально');
+        }
+
+        // ===== НАВИГАЦИЯ =====
+        function showMainMenu() {
+            document.getElementById('navHeader').textContent = 'Главное меню';
+            document.getElementById('shopContainer').style.display = 'none';
+            document.getElementById('gameCanvas').style.display = 'block';
+        }
+
+        function showShop() {
+            document.getElementById('navHeader').textContent = 'Магазин скинов';
+            document.getElementById('shopContainer').style.display = 'block';
+            document.getElementById('gameCanvas').style.display = 'none';
+            renderShop();
+        }
+
+        function showLeaders() {
+            document.getElementById('navHeader').textContent = 'Таблица лидеров';
+            document.getElementById('shopContainer').style.display = 'none';
+            document.getElementById('gameCanvas').style.display = 'block';
+            alert('Таблица лидеров будет скоро добавлена!');
+        }
+
+        function startDinoGame() {
+            if (!gameRunning) {
+                document.getElementById('navHeader').textContent = 'Dino Runner - Игра началась!';
+                document.getElementById('shopContainer').style.display = 'none';
+                document.getElementById('gameCanvas').style.display = 'block';
+                startGame();
+                gameRunning = true;
+            }
+        }
+
+        function jumpDino() {
+            if (gameRunning) {
+                const jumpEvent = new KeyboardEvent('keydown', {
+                    keyCode: 38,
+                    code: 'ArrowUp'
+                });
+                document.dispatchEvent(jumpEvent);
+            }
+        }
+
+        // ===== МОБИЛЬНЫЕ КОНТРОЛЫ =====
+        if ('ontouchstart' in window) {
+            document.getElementById('mobileControls').style.display = 'flex';
+        }
+
+        // ===== ИНИЦИАЛИЗАЦИЯ =====
+        updatePoints(0);
+        updateCoins(coins);
+        updateStars(stars);
+        updateTotalScore(totalScore);
+        updateExchangeButton();
+
+        // Загружаем текущий скин при запуске
+        const currentSkinData = userSkins.find(s => s.id === currentSkin);
+        if (currentSkinData) {
+            sprImg.src = currentSkinData.spriteUrl;
+        }
+    </script>
+
+    <!-- ИГРА DINO -->
+    <script>
+        // ИГРОВЫЕ ПЕРЕМЕННЫЕ
+        let scoreInterval = 0;
+        let frameInterval = 0;
+        let groundscroll = 0;
+        let groundscroll2 = 0;
+        let tempstart = 0;
+        let groundbool = false;
+        let frame = 0;
+        let bool = false;
+        let grav = 0.6;
+        let gamespeed = 0;
+
+        let multiS = -1;
+        let picS = 0;
+        let obsS = {
+            x: 20,
+            y: 230,
+            w: 34,
+            h: 70,
+            scroll: -100,
+            on: false
+        };
+
+        let multiB = -1;
+        let picB = 0;
+        let obsB = {
+            x: 20,
+            y: 201,
+            w: 49,
+            h: 100,
+            scroll: -200,
+            on: false
+        };
+
+        let obsF = {
+            x: 20,
+            y: 250,
+            w: 93,
+            h: 69,
+            scroll: -100
+        };
+
+        let p = {
+            x: 100,
+            y: 500,
+            w: 89,
+            h: 94,
+            yv: 0,
+            score: 0,
+            hscore: 0,
+            jump: 15
+        };
+
+        let pcrouch = {
+            x: p.x,
+            y: p.y,
+            w: 118,
+            h: 60
+        };
+
+        let pbox = {
+            x: p.x,
+            y: 0,
+            w: 80,
+            h: 75
+        };
+
+        let onG = false;
+        let sprImg = new Image();
+        let canvas, ctx, plat;
+
+        // ИНИЦИАЛИЗАЦИЯ ИГРЫ
+        window.onload = function(){
+            canvas = document.getElementById('gameCanvas');
+            ctx = canvas.getContext('2d');
+
+            setInterval(update, 1000/60);
+            document.addEventListener("keydown", keyDown);
+
+            // Загружаем текущий скин
+            const currentSkinData = userSkins.find(s => s.id === currentSkin);
+            sprImg.src = currentSkinData ? currentSkinData.spriteUrl : "C:/Users/User/Downloads/dino-runner-app/image.png";
+
+            plat = {
+                x: 0,
+                y: canvas.height - 100,
+                w: canvas.width,
+                h: 5,
+            };
+        };
+
+        // ОСНОВНАЯ ФУНКЦИЯ ОБНОВЛЕНИЯ
+        function update(){
+            if(!onG){
+                p.yv += grav;
+            }
+
+            p.y += p.yv;
+            pbox.y = p.y;
+            scoreInterval++;
+            
+            // Каждое очко = 1 монета (начисляем сразу во время игры)
+            if (scoreInterval > 6 && gamespeed != 0){
+                p.score++;
+                scoreInterval = 0;
+                updatePoints(p.score);
+            }
+
+            if (gamespeed < 17 && gamespeed != 0){
+                gamespeed = 7 + (p.score/100);
+            }
+
+            onG = false;
+            if (p.y + p.h > plat.y){
+                p.y = plat.y - p.h;
+                onG = true;
+            }
+
+            // Столкновения
+            if (pbox.x > (canvas.width - obsB.scroll) - p.w && pbox.x < (canvas.width - obsB.scroll) + (obsB.w * multiB) &&
+                pbox.y > obsB.y - pbox.h){
+                gameover();
+            }
+
+            if (pbox.x > (canvas.width - obsS.scroll) - p.w && pbox.x < (canvas.width - obsS.scroll) + (obsS.w * multiS) &&
+                pbox.y > obsS.y - pbox.h){
+                gameover();
+            }
+
+            // Анимация динозавра
+            frameInterval++;
+            if (frameInterval > 5){
+                bool = !bool;
+                frameInterval = 0;
+            }
+
+            if (bool && onG){
+                frame = 1514;
+            } else if (!bool && onG){
+                frame = 1602;
+            } else {
+                frame = 1338;
+            }
+
+            // Отрисовка
+            ctx.fillStyle = "white";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Отрисовка земли
+            groundscroll += gamespeed;
+            ctx.drawImage(sprImg, 0, 104, 2404, 18, 0 - groundscroll + tempstart, plat.y - 24, 2404, 18);
+            if (groundscroll - tempstart > 2404 - canvas.width || groundbool){
+                groundbool = true;
+                groundscroll2 += gamespeed;
+                ctx.drawImage(sprImg, 0, 104, canvas.width, 18, 0 - groundscroll2 + canvas.width, plat.y - 24, canvas.width, 18);
+                if (groundscroll2 > canvas.width && groundscroll - tempstart > 1000){
+                    tempstart = canvas.width;
+                    groundscroll = 20;
+                }
+                if (groundscroll2 > 2402){
+                    groundscroll2 = 0;
+                    groundbool = false;
+                }
+            }
+
+            // Отрисовка динозавра
+            if(gamespeed != 0){
+                ctx.fillStyle = "black";
+                ctx.drawImage(sprImg, frame, 0, 88, 94, p.x, p.y, p.w, p.h);
+            } else {
+                ctx.drawImage(sprImg, 1338, 0, 88, 94, p.x, p.y, p.w, p.h);
+            }
+
+            // Отрисовка препятствий
+            if (!obsB.on){
+                obsS.on = true;
+                if (multiS == -1){
+                    rngS();
+                }
+                ctx.drawImage(sprImg, picS, 2, obsS.w * multiS, obsS.h, canvas.width - obsS.scroll, obsS.y, obsS.w * multiS, obsS.h);
+                obsS.scroll += gamespeed;
+                if (obsS.scroll > canvas.width + obsS.w * 3){
+                    obsS.scroll = -100;
+                    multiS = -1;
+                    obsS.on = false;
+                }
+            }
+
+            if(!obsS.on){
+                obsB.on = true;
+                if (multiB == -1){
+                    rngB();
+                }
+                ctx.drawImage(sprImg, 652, 2, obsB.w * multiB, obsB.h, canvas.width - obsB.scroll, obsB.y, obsB.w * multiB, obsB.h);
+                obsB.scroll += gamespeed;
+                if (obsB.scroll > canvas.width + obsB.w * 3){
+                    obsB.scroll = -200;
+                    multiB = -1;
+                    obsB.on = false;
+                }
+            }
+
+            // Отрисовка счета
+            ctx.font = '20px verdana';
+            ctx.fillStyle = "black";
+            ctx.fillText("Score: ", 100, canvas.height - 40);
+            ctx.fillText(p.score, 170, canvas.height - 40);
+            ctx.fillText("Highscore: ", 600, canvas.height - 40);
+            ctx.fillText(p.hscore, 715, canvas.height - 40);
+        }
+
+        // ФУНКЦИЯ ЗАВЕРШЕНИЯ ИГРЫ
+        function gameover() {
+            gamespeed = 0;
+            gameRunning = false;
+            
+            const finalScore = p.score;
+
+            if (finalScore > p.hscore) {
+                p.hscore = finalScore;
+            }
+
+            // Сохраняем результат (каждое очко = 1 монета)
+            saveGameScore(finalScore, 0);
+
+            document.getElementById('navHeader').textContent = 
+                `Игра окончена! Очки: ${finalScore}, Монеты: +${finalScore}`;
+
+            // Сброс игровых переменных
+            p.score = 0;
+            obsB.scroll = -200;
+            obsS.scroll = -100;
+
+            scoreInterval = 0;
+            frameInterval = 0;
+            groundscroll = 0;
+            groundscroll2 = 0;
+            tempstart = 0;
+            groundbool = false;
+            multiS = -1;
+            multiB = -1;
+
+            updatePoints(0);
+        }
+
+        // УПРАВЛЕНИЕ
+        function keyDown(evt) {
+            if (evt.keyCode == 38) {
+                if(onG) {
+                    p.yv = -p.jump;
+                }
+                if(gamespeed == 0){
+                    gamespeed = 7;
+                    gameRunning = true;
+                    document.getElementById('navHeader').textContent = 'Dino Runner - Игра началась!';
+                }
+            }
+        }
+
+        function startGame() {
+            gamespeed = 7;
+            gameRunning = true;
+            p.score = 0;
+            updatePoints(0);
+            obsB.scroll = -200;
+            obsS.scroll = -100;
+            multiS = -1;
+            multiB = -1;
+            document.getElementById('navHeader').textContent = 'Dino Runner - Игра началась!';
+        }
+
+        function rngS(){
+            multiS = Math.floor(Math.random() * 3) + 1;
+            picS = 446 + (Math.floor(Math.random() * 2) * 102);
+        }
+
+        function rngB(){
+            multiB = Math.floor(Math.random() * 3) + 1;
+            picB = 652 + (Math.floor(Math.random() * 2) * 150);
+        }
+    </script>
+</body>
+</html>
